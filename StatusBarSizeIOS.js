@@ -4,18 +4,16 @@
  */
 'use strict';
 
-var React = require('react-native');
-var { DeviceEventEmitter, NativeModules } = React;
-var { RNStatusBarSize } = NativeModules;
+const { NativeEventEmitter, StatusBarIOS, NativeModules } = require('react-native');
+const { StatusBarManager } = NativeModules;
 
 var DEVICE_STATUS_BAR_HEIGHT_EVENTS = {
-  willChange: 'statusBarSizeWillChange',
-  didChange: 'statusBarSizeDidChange',
-  change: 'statusBarSizeDidChange'
+  willChange: 'statusBarFrameWillChange',
+  didChange: 'statusBarFrameDidChange',
+  change: 'statusBarFrameDidChange',
 };
 
 var _statusBarSizeHandlers = {};
-var noop = function() {};
 
 /**
  * `StatusBarSizeIOS` can tell you what the current height of the status bar
@@ -35,17 +33,17 @@ var noop = function() {};
  *   };
  * },
  * componentDidMount: function() {
- *   StatusBarSizeIOS.addEventListener('willChange', this._handleStatusBarSizeWillChange);
- *   StatusBarSizeIOS.addEventListener('didChange', this._handleStatusBarSizeDidChange);
+ *   StatusBarSizeIOS.addEventListener('willChange', this._handleStatusBarFrameWillChange);
+ *   StatusBarSizeIOS.addEventListener('didChange', this._handleStatusBarFrameDidChange);
  * },
  * componentWillUnmount: function() {
- *   StatusBarSizeIOS.removeEventListener('willChange', this._handleStatusBarSizeWillChange);
- *   StatusBarSizeIOS.removeEventListener('didChange', this._handleStatusBarSizeDidChange);
+ *   StatusBarSizeIOS.removeEventListener('willChange', this._handleStatusBarFrameWillChange);
+ *   StatusBarSizeIOS.removeEventListener('didChange', this._handleStatusBarFrameDidChange);
  * },
- * _handleStatusBarSizeWillChange: function(upcomingStatusBarHeight) {
+ * _handleStatusBarFrameWillChange: function(upcomingStatusBarHeight) {
  *   console.log('Upcoming StatusBar Height:' + upcomingStatusBarHeight);
  * },
- * _handleStatusBarSizeDidChange: function(currentStatusBarHeight) {
+ * _handleStatusBarFrameDidChange: function(currentStatusBarHeight) {
  *   this.setState({ currentStatusBarHeight, });
  * },
  * render: function() {
@@ -70,10 +68,10 @@ var StatusBarSizeIOS = {
     type: string,
     handler: Function
   ) {
-    _statusBarSizeHandlers[handler] = DeviceEventEmitter.addListener(
+    _statusBarSizeHandlers[handler] = StatusBarIOS.addListener(
       DEVICE_STATUS_BAR_HEIGHT_EVENTS[type],
-      (statusBarSizeData) => {
-        handler(statusBarSizeData.height);
+      (statusBarData) => {
+        handler(statusBarData.frame.height);
       }
     );
   },
@@ -96,19 +94,18 @@ var StatusBarSizeIOS = {
 
 };
 
-DeviceEventEmitter.addListener(
+StatusBarIOS.addListener(
   DEVICE_STATUS_BAR_HEIGHT_EVENTS.didChange,
   (statusBarData) => {
-    StatusBarSizeIOS.currentHeight = statusBarData.height;
+    StatusBarSizeIOS.currentHeight = statusBarData.frame.height;
   }
 );
 //Wrap in try catch to avoid error on android
 try {
-  RNStatusBarSize.getCurrentStatusBarHeight(
-    (statusBarData) => {
-      StatusBarSizeIOS.currentHeight = statusBarData.height;
-    },
-    noop
+  StatusBarManager.getHeight(
+    (statusBarFrameData) => {
+      StatusBarSizeIOS.currentHeight = statusBarFrameData.height;
+    }
   );
 } catch (e) {
 
